@@ -12,8 +12,7 @@ csv.register_dialect('NER_data_format', quoting=csv.QUOTE_NONE, delimiter=_DIALE
 
 _SUC_DATA_LOCATION = 'data/suc3.xml'
 _NER_FILENAME = 'NER.tsv'
-_NER_TEXT_FILENAME = 'NER_text.tsv'
-_NER_ENTITY_TYPE_FILENAME = 'NER_entity_type.tsv'
+
 _NO_ENTITY_TAG = 'O'
 _SAVE_TO_DATA_LOCATION = 'data/'
 
@@ -123,44 +122,74 @@ def saveNERdataFromSUC():
     [print(f"{category}: {number_of_tokens}") for category, number_of_tokens in name_keeper.CONLL_tags.items()]
     print(f"There were {nbr_extra_name} name tags not covered by ne tags and {nbr_extra_ne} ne tags not covered by name tags.")
 
-def save_splits_from_file(read_filename, write_train_filename, write_eval_filename, write_test_filename, train_ix, eval_ix, test_ix):
-    with open(read_filename, 'rt') as f, open(write_train_filename, 'w') as f_train, open(write_eval_filename, 'w') as f_eval, open(write_test_filename, 'w') as f_test:
-        reader = csv.reader(f, dialect='NER_data_format')
-        train_writer = csv.writer(f_train, dialect='NER_data_format')
-        eval_writer = csv.writer(f_eval, dialect='NER_data_format')
-        test_writer = csv.writer(f_test, dialect='NER_data_format')
-
-        reader_ix = 0
-        for row in reader:
-            if reader_ix in train_ix:
-                train_writer.writerow(row)
-            elif reader_ix in test_ix:
-                test_writer.writerow(row)
-            elif reader_ix in eval_ix:
-                eval_writer.writerow(row)
-            else:
-                raise ValueError(reader_ix)
-            reader_ix += 1
+class NER_split_saver():
+    def __init__(self, read_filename, write_train_filename, write_eval_filename, write_test_filename):
+        f = open(read_filename, 'rt')
+        f_train = open(write_train_filename, 'w')
+        f_eval = open(write_eval_filename, 'w')
+        f_test = open(write_test_filename, 'w')
+        
+        self.reader = csv.reader(f, dialect='NER_data_format')
+        self.writers = {'train': csv.writer(f_train, dialect='NER_data_format'),
+                        'eval': csv.writer(f_eval, dialect='NER_data_format'),
+                        'test': csv.writer(f_test, dialect='NER_data_format')}
+        
+        default_CONLL_tags = {'LOC': 0,
+                                'MISC': 0,
+                                'ORG': 0,
+                                'PER': 0,
+                                'O': 0}
+        self.CONLL_tags = {'train': default_CONLL_tags.copy(),
+                           'eval': default_CONLL_tags.copy(),
+                           'test': default_CONLL_tags.copy()}
+        
+    def decide_on_state(self, reader_ix, train_ix, eval_ix, test_ix):
+        if reader_ix in train_ix:
+            return 'train'
+        elif reader_ix in test_ix:
+            return 'test'
+        elif reader_ix in eval_ix:
+            return 'eval'
+        else:
+            raise ValueError(reader_ix)
+        
+    def save_splits_from_file(self, nbr_sentences, train_ix, eval_ix, test_ix):
+            reader_ix = 0
+            current_state = self.decide_on_state(reader_ix, train_ix, eval_ix, test_ix)
+            for row in self.reader:
+                # check for sentence breaks
+                if len(row) == 0:
+                    self.writers[current_state].writerow(row)
+                    reader_ix += 1
+                    if reader_ix >= nbr_sentences:
+                        break
+                    current_state = self.decide_on_state(reader_ix, train_ix, eval_ix, test_ix)
+                else:
+                    self.writers[current_state].writerow(row)
+                    self.CONLL_tags[current_state][row[1]] += 1
             
 def create_splits_from_saved_NER_data(nbr_sentences):
     data_ix = range(nbr_sentences)
     train_ix, test_ix = train_test_split(data_ix, test_size=0.3, random_state=42)
     test_ix, eval_ix = train_test_split(test_ix, test_size=0.33, random_state=42)
 
-    save_splits_from_file(_SAVE_TO_DATA_LOCATION+_NER_TEXT_FILENAME, 
-                          _SAVE_TO_DATA_LOCATION+'train_'+_NER_TEXT_FILENAME, 
-                          _SAVE_TO_DATA_LOCATION+'eval_'+_NER_TEXT_FILENAME, 
-                          _SAVE_TO_DATA_LOCATION+'test_'+_NER_TEXT_FILENAME, 
-                          train_ix, eval_ix, test_ix)
-
-    save_splits_from_file(_SAVE_TO_DATA_LOCATION+_NER_ENTITY_TYPE_FILENAME, 
-                          _SAVE_TO_DATA_LOCATION+'train_'+_NER_ENTITY_TYPE_FILENAME, 
-                          _SAVE_TO_DATA_LOCATION+'eval_'+_NER_ENTITY_TYPE_FILENAME, 
-                          _SAVE_TO_DATA_LOCATION+'test_'+_NER_ENTITY_TYPE_FILENAME, 
-                          train_ix, eval_ix, test_ix)
+    ner_split_saver = NER_split_saver(_SAVE_TO_DATA_LOCATION+_NER_FILENAME, 
+                                      _SAVE_TO_DATA_LOCATION+'train_'+_NER_FILENAME, 
+                                      _SAVE_TO_DATA_LOCATION+'eval_'+_NER_FILENAME, 
+                                      _SAVE_TO_DATA_LOCATION+'test_'+_NER_FILENAME)
+    ner_split_saver.save_splits_from_file(nbr_sentences, train_ix, eval_ix, test_ix)
 
     print(f"NER data splitted!")
     print(f"Created {len(train_ix)} train samples, {len(eval_ix)} eval samples and {len(test_ix)} test samples.")
+    print()
+    print(f"Entity type distribution over the splitted sets:")
+    print(f"TRAIN")
+    [print(f"\t{category}: {number_of_tokens}") for category, number_of_tokens in ner_split_saver.CONLL_tags['train'].items()]
+    print(f"EVAL")
+    [print(f"\t{category}: {number_of_tokens}") for category, number_of_tokens in ner_split_saver.CONLL_tags['eval'].items()]
+    print(f"TEST")
+    [print(f"\t{category}: {number_of_tokens}") for category, number_of_tokens in ner_split_saver.CONLL_tags['test'].items()]
+    
 
 def create_NER_datasets():
     # read the csv data
@@ -173,5 +202,5 @@ def create_NER_datasets():
 
     # save to files
 
-saveNERdataFromSUC()
-#create_splits_from_saved_NER_data(74245)
+#saveNERdataFromSUC()
+create_splits_from_saved_NER_data(74245)
