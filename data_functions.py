@@ -16,25 +16,47 @@ _NER_ENTITY_TYPE_FILENAME = 'NER_entity_type.csv'
 _NO_ENTITY_TAG = 'O'
 _SAVE_TO_DATA_LOCATION = 'data/'
 
-def get_name_info(name_entity):
-    # there can be more than one word after a name tag. e.g. Vytautas Landsbergis
-    # there can also be ne _overlap within names, we only want the words
-    name_entity_words = []
-    name_entity_types = []
-    for child in name_entity:
-        if child.tag == "w":
-            name_entity_words.append(child.text)
-            name_entity_types.append(name_entity.attrib['type'])
-        elif child.tag == "ne":
-            for ne_child in child:
-                if ne_child.tag == "w":
-                    name_entity_words.append(ne_child.text)
-                    name_entity_types.append(name_entity.attrib['type'])
-                else:
-                    raise ValueError(ne_child.tag)
-        else:
-            raise ValueError(child.tag)
-    return name_entity_words, name_entity_types
+class NameKeeper():
+    def __init__(self):
+        self.nbr_name_tags = 0
+        self.nbr_per_name_tag = {'person': 0, 
+                                 'animal': 0, 
+                                 'myth': 0, 
+                                 'place': 0, 
+                                 'inst': 0, 
+                                 'product': 0, 
+                                 'work': 0, 
+                                 'event': 0, 
+                                 'other': 0
+                                 }
+
+    def get_name_info(self, name_entity):
+        # there can be more than one word after a name tag. e.g. Vytautas Landsbergis
+        # there can also be ne _overlap within names, we only want the words
+        name_entity_words = []
+        name_entity_types = []
+        for child in name_entity:
+            if child.tag == "w":
+                name_entity_words.append(child.text)
+                name_entity_types.append(name_entity.attrib['type'])
+            elif child.tag == "ne":
+                for ne_child in child:
+                    if ne_child.tag == "w":
+                        name_entity_words.append(ne_child.text)
+                        name_entity_types.append(name_entity.attrib['type'])
+                    else:
+                        raise ValueError(ne_child.tag)
+            else:
+                raise ValueError(child.tag)
+            
+        if len(set(name_entity_types)) > 1:
+            # expect to only have one type per name tag
+            raise ValueError(name_entity_types)
+        
+        self.nbr_name_tags += len(name_entity_types)
+        self.nbr_per_name_tag[name_entity_types[0]] += len(name_entity_types)
+
+        return name_entity_words, name_entity_types
 
 def saveNERdataFromSUC():
     tree = ET.parse(_SUC_DATA_LOCATION)
@@ -49,6 +71,7 @@ def saveNERdataFromSUC():
         num_saved = 0
         nbr_extra_ne = 0
         nbr_extra_name = 0
+        name_keeper = NameKeeper()
 
         sentence_index = 0
         for sentence in root.findall("./text/sentence"):
@@ -62,7 +85,7 @@ def saveNERdataFromSUC():
                 elif child.tag == "ne":
                     for subchild in child:
                         if subchild.tag == "name":
-                            entity_text, entity_type = get_name_info(subchild)
+                            entity_text, entity_type = name_keeper.get_name_info(subchild)
                             sentence_words.extend(entity_text)
                             sentence_entity_types.extend(entity_type)
                         elif subchild.tag == "w":
@@ -72,7 +95,7 @@ def saveNERdataFromSUC():
                             raise ValueError(sentence_index)
                 elif child.tag == "name":
                     nbr_extra_name += 1
-                    entity_text, entity_type = get_name_info(child)
+                    entity_text, entity_type = name_keeper.get_name_info(child)
                     sentence_words.extend(entity_text)
                     sentence_entity_types.extend(entity_type)
                 else:
@@ -82,6 +105,9 @@ def saveNERdataFromSUC():
             entity_type_writer.writerow(sentence_entity_types)
 
     print(f"NER data saved! \n{sentence_index} sentences available. \nSaved a total of {num_saved} sentences.")
+    print(f"The dataset contains a total of {name_keeper.nbr_name_tags} named entity tokens.")
+    print(f"Number of named entity tokens per classification category:")
+    [print(f"{category}: {number_of_tokens}") for category, number_of_tokens in name_keeper.nbr_per_name_tag.items()]
     print(f"There were {nbr_extra_name} name tags not covered by ne tags and {nbr_extra_ne} ne tags not covered by name tags.")
 
 def create_splits_from_saved_NER_data(nbr_sentences):
@@ -121,5 +147,5 @@ def create_NER_datasets():
 
     # save to files
 
-#saveNERdataFromSUC()
-create_splits_from_saved_NER_data(74245)
+saveNERdataFromSUC()
+#create_splits_from_saved_NER_data(74245)
