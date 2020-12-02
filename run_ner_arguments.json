@@ -1,7 +1,7 @@
 {
-    "data_dir": "data/splitted_NER/",
+    "data_dir": "data/IOB2_splitted_NER/",
     "tokenizer-name": "KB/bert-base-swedish-cased",
-    "labels": "data/labels.txt",
+    "labels": "data/IOB2_splitted_NER/labels.txt",
     "model_name_or_path": "KB/bert-base-swedish-cased",
     "output_dir": "bert-model-first",
     "max_seq_length": 128,

@@ -10,6 +10,7 @@ _DIALECT['lineterminator'] = '\n'#'\r\n'
 _DIALECT['escapechar'] = '\\'
 csv.register_dialect('NER_data_format', quoting=csv.QUOTE_NONE, delimiter=_DIALECT['delimiter'], lineterminator=_DIALECT['lineterminator'], escapechar=_DIALECT['escapechar'])
 _CSV_DIALECT = "NER_data_format"
+_USE_IOB2_FORMAT = True
 _WRITE_FIELDNAMES = False
 _CSV_FIELDNAMES = ['word', 'ner_label']
 
@@ -53,17 +54,19 @@ class NameKeeper():
         # there can also be ne _overlap within names, we only want the words
         name_entity_rows = []
         name_type = SUC_to_CONLL[name_entity.attrib['type']]
+        prefixed_name_type = "B-"+name_type
         for child in name_entity:
             if child.tag == "w":
-                name_entity_rows.append([child.text, name_type])
+                name_entity_rows.append([child.text, prefixed_name_type if _USE_IOB2_FORMAT else name_type])
             elif child.tag == "ne":
                 for ne_child in child:
                     if ne_child.tag == "w":
-                        name_entity_rows.append([ne_child.text, name_type])
+                        name_entity_rows.append([ne_child.text, prefixed_name_type if _USE_IOB2_FORMAT else name_type])
                     else:
                         raise ValueError(ne_child.tag)
             else:
                 raise ValueError(child.tag)
+            prefixed_name_type = "I-"+name_type
             
         self.nbr_name_tags += len(name_entity_rows)
         self.SUC_tags[name_entity.attrib['type']] += len(name_entity_rows)
@@ -179,7 +182,10 @@ class NER_split_saver():
                     current_state = self.decide_on_state(reader_ix, train_ix, eval_ix, test_ix)
                 else:
                     self.writers[current_state].writerow(row)
-                    self.CONLL_tags[current_state][row[1]] += 1
+                    name_type = row[1]
+                    if _USE_IOB2_FORMAT:
+                        name_type = name_type.strip("B-").strip("I-")
+                    self.CONLL_tags[current_state][name_type] += 1
             
 def create_splits_from_saved_NER_data(nbr_sentences):
     # skip the header row
