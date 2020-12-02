@@ -5,15 +5,16 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 _DIALECT = {}
-_DIALECT['delimiter'] = ','
+_DIALECT['delimiter'] = ' '
 _DIALECT['lineterminator'] = '\n'#'\r\n'
-_DIALECT['escapechar'] = '"'
+_DIALECT['escapechar'] = '\\'
 csv.register_dialect('NER_data_format', quoting=csv.QUOTE_NONE, delimiter=_DIALECT['delimiter'], lineterminator=_DIALECT['lineterminator'], escapechar=_DIALECT['escapechar'])
-_CSV_DIALECT = "excel"
+_CSV_DIALECT = "NER_data_format"
+_WRITE_FIELDNAMES = False
 _CSV_FIELDNAMES = ['word', 'ner_label']
 
 _SUC_DATA_LOCATION = 'data/suc3.xml'
-_NER_FILENAME = 'NER.csv'
+_NER_FILENAME = 'NER.txt'
 
 _NO_ENTITY_TAG = 'O'
 _SAVE_TO_DATA_LOCATION = 'data/'
@@ -82,7 +83,8 @@ def saveNERdataFromSUC():
 
     with open (_SAVE_TO_DATA_LOCATION+_NER_FILENAME, 'w') as f:
         writer = csv.writer(f, dialect=_CSV_DIALECT)
-        writer.writerow(_CSV_FIELDNAMES)
+        if _WRITE_FIELDNAMES:
+            writer.writerow(_CSV_FIELDNAMES)
 
         num_saved = 0
         nbr_extra_ne = 0
@@ -136,8 +138,9 @@ class NER_split_saver():
         self.writers = {'train': csv.writer(f_train, dialect=_CSV_DIALECT),
                         'eval': csv.writer(f_eval, dialect=_CSV_DIALECT),
                         'test': csv.writer(f_test, dialect=_CSV_DIALECT)}
-        for writer in self.writers.values():
-            writer.writerow(_CSV_FIELDNAMES)
+        if _WRITE_FIELDNAMES:
+            for writer in self.writers.values():
+                writer.writerow(_CSV_FIELDNAMES)
         
         default_CONLL_tags = {'LOC': 0,
                                 'MISC': 0,
@@ -159,9 +162,12 @@ class NER_split_saver():
             raise ValueError(reader_ix)
         
     def save_splits_from_file(self, nbr_sentences, train_ix, eval_ix, test_ix):
+            reader_ix = 0
             # skip the first header row
-            next(self.reader)
-            reader_ix = 1
+            if _WRITE_FIELDNAMES:
+                next(self.reader)
+                reader_ix = 1
+                
             current_state = self.decide_on_state(reader_ix, train_ix, eval_ix, test_ix)
             for row in self.reader:
                 # check for sentence breaks
@@ -177,7 +183,10 @@ class NER_split_saver():
             
 def create_splits_from_saved_NER_data(nbr_sentences):
     # skip the header row
-    data_ix = range(1,nbr_sentences+1)
+    if _WRITE_FIELDNAMES:
+        data_ix = range(1,nbr_sentences+1)
+    else:
+        data_ix = range(nbr_sentences)
     train_ix, test_ix = train_test_split(data_ix, test_size=0.3, random_state=42)
     test_ix, eval_ix = train_test_split(test_ix, test_size=0.33, random_state=42)
 
