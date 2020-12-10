@@ -1,5 +1,6 @@
 import sys
 from seqeval.metrics import classification_report as classification_report_seqeval
+from seqeval.scheme import IOB2
 
 #load test set and predictions for it
 
@@ -56,7 +57,7 @@ def print_classification_report_to_file(filename, y_true, y_pred):
 
     with open(filename, 'w') as f:
         sys.stdout = f # Change the standard output to the file we created.
-        print(classification_report_seqeval(y_true, y_pred))
+        print(classification_report_seqeval(y_true, y_pred, mode='strict', scheme=IOB2))
         sys.stdout = original_stdout # Reset the standard output to its original value
     
     
@@ -98,8 +99,8 @@ def generate_error_sentences_to_file(test_file_path, predictions_file_path, prin
 test_file_path = "data/IOB2_splitted_NER/test.txt"
 predictions_file_path = "bert-model-first-test/test_predictions.txt"
 
-# generate_classification_report_to_file(test_file_path, 
-#                                        predictions_file_path, 
-#                                        "bert-model-first-test/classification_report.txt")
+generate_classification_report_to_file(test_file_path, 
+                                       predictions_file_path, 
+                                       "bert-model-first-test/classification_report.txt")
 
-generate_error_sentences_to_file(test_file_path, predictions_file_path, "bert-model-first-test/error_sentences.txt")
+#generate_error_sentences_to_file(test_file_path, predictions_file_path, "bert-model-first-test/error_sentences.txt")
