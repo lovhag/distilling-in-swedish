@@ -1,6 +1,6 @@
-DIRNAME="simple-lstm-20"
+DIRNAME="simple-lstm-128-20"
 LOG_DIRNAME="model-logdir/${DIRNAME}"
-MODEL_CLASS="SimpleLSTM"
+MODEL_CLASS="SimpleLSTM128"
 
 /home/lovhag/miniconda3/envs/distilling-in-swedish-run-ner/bin/python /home/lovhag/projects/transformers/examples/token-classification/run_ner_old_any_model.py \
 --data_dir /disk/lovhag/IOB2_splitted_NER \
