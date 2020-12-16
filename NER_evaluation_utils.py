@@ -97,10 +97,13 @@ def generate_error_sentences_to_file(test_file_path, predictions_file_path, prin
 
 
 test_file_path = "data/IOB2_splitted_NER/test.txt"
-predictions_file_path = "bert-model-first-test/test_predictions.txt"
+model_path = "simple-lstm-128-20"
+predictions_file_path = model_path +"/test_predictions.txt"
 
 generate_classification_report_to_file(test_file_path, 
                                        predictions_file_path, 
-                                       "bert-model-first-test/classification_report.txt")
+                                       model_path+"/classification_report.txt")
 
-#generate_error_sentences_to_file(test_file_path, predictions_file_path, "bert-model-first-test/error_sentences.txt")
+generate_error_sentences_to_file(test_file_path, 
+                                 predictions_file_path, 
+                                 model_path+"/error_sentences.txt")
