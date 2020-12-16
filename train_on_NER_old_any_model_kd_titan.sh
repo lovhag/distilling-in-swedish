@@ -1,4 +1,4 @@
-DIRNAME="window-sequence-kd-20"
+DIRNAME="window-sequence-kd-1"
 LOG_DIRNAME="model-logdir/${DIRNAME}"
 MODEL_CLASS="WindowSequenceModel"
 
@@ -12,7 +12,7 @@ MODEL_CLASS="WindowSequenceModel"
 --max_seq_length 128 \
 --seed 1 \
 --per_device_train_batch_size 32 \
---num_train_epochs 20 \
+--num_train_epochs 1 \
 --save_steps 5000 \
 --learning_rate 0.001 \
 --evaluation_strategy epoch \
