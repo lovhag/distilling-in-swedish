@@ -1,6 +1,7 @@
-DIRNAME="simple-lstm-128-kd-20"
+DIRNAME="window-sequence-kd-20-001"
 LOG_DIRNAME="model-logdir/${DIRNAME}"
-MODEL_CLASS="SimpleLSTM128"
+MODEL_CLASS="WindowSequenceModel"
+BATCH_SIZE=128
 
 /home/lovhag/miniconda3/envs/distilling-in-swedish-run-ner/bin/python /home/lovhag/projects/transformers/examples/token-classification/run_ner_old_any_model.py \
 --data_dir /disk/lovhag/IOB2_splitted_NER \
@@ -11,7 +12,8 @@ MODEL_CLASS="SimpleLSTM128"
 --logging_dir $LOG_DIRNAME \
 --max_seq_length 128 \
 --seed 1 \
---per_device_train_batch_size 32 \
+--per_device_train_batch_size $BATCH_SIZE \
+--per_device_eval_batch_size $BATCH_SIZE \
 --num_train_epochs 20 \
 --save_steps 5000 \
 --learning_rate 0.001 \
@@ -19,7 +21,7 @@ MODEL_CLASS="SimpleLSTM128"
 --do_train \
 --do_eval \
 --do_predict \
---kd_param 0.5 \
+--kd_param 0.01 \
 --loss_fct_kd KL \
 
 #default learning rate=5e-5
